@@ -1,9 +1,9 @@
 import os
 import asyncio
-import requests
 from pyrogram import Client, filters
+import requests
 
-# এনভায়রনমেন্ট ভেরিয়েবল
+# এনভায়রনমেন্ট ভেরিয়েবল থেকে তথ্য নেওয়া
 API_ID = int(os.environ.get("API_ID"))
 API_HASH = os.environ.get("API_HASH")
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
@@ -12,15 +12,15 @@ app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 @app.on_message(filters.command("start"))
 async def start(client, message):
-    await message.reply_text("বট এখন ক্লাউড সার্ভারে সচল আছে!")
+    await message.reply_text("বট এখন ক্লাউড সার্ভারে সচল আছে! (০ এমবি খরচ)")
 
 @app.on_message(filters.text & filters.private)
 async def upload_file(client, message):
     url = message.text
     if not url.startswith("http"):
-        return await message.reply_text("দয়া করে সঠিক লিঙ্ক দিন।")
+        return await message.reply_text("দয়া করে সঠিক ডাউনলোড লিঙ্ক দিন।")
         
-    sent_msg = await message.reply_text("সার্ভারে প্রসেসিং হচ্ছে (আপনার ডাটা খরচ হবে না)...")
+    sent_msg = await message.reply_text("সার্ভারে ডাউনলোড হচ্ছে (আপনার ডাটা খরচ হবে না)...")
     
     try:
         file_name = url.split("/")[-1] or "file"
@@ -36,6 +36,12 @@ async def upload_file(client, message):
     except Exception as e:
         await sent_msg.edit(f"Error: {str(e)}")
 
-# রেন্ডার সার্ভারের এরর সমাধানের জন্য এই অংশটি জরুরি
+# মেইন ফাংশন যা এরর হ্যান্ডেল করবে
+async def main():
+    await app.start()
+    print("বট সচল হয়েছে!")
+    await asyncio.Event().wait()
+
 if __name__ == "__main__":
-    app.run()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
