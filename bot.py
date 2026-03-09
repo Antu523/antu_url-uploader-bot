@@ -96,4 +96,15 @@ def keep_alive():
 # আপনার মূল কোডের app.run() এর ঠিক আগে keep_alive() কল করুন
 if __name__ == "__main__":
     keep_alive()
+if __name__ == "__main__":
+    import asyncio
+    
+    # Keep alive server start
+    keep_alive()
+    
+    # নতুন পাইথন ভার্সনের জন্য লুপ হ্যান্ডলিং
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    print("বোটটি সচল আছে...")
     app.run()
