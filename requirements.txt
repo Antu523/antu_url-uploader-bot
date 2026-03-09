@@ -1,5 +1,3 @@
-pyrogram
-tgcrypto
-aiohttp
-aiofiles
+telethon
 flask
+cryptg
