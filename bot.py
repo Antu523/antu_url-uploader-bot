@@ -108,3 +108,34 @@ if __name__ == "__main__":
     
     print("বোটটি সচল আছে...")
     app.run()
+import os
+import asyncio
+import aiohttp
+import aiofiles
+from pyrogram import Client, filters
+from flask import Flask
+from threading import Thread
+
+# Flask App for Keep Alive
+web_app = Flask('')
+@web_app.route('/')
+def home(): return "Bot is Running!"
+def run(): web_app.run(host='0.0.0.0', port=8080)
+def keep_alive(): Thread(target=run).start()
+
+# Credentials from Environment Variables
+API_ID = os.environ.get("API_ID")
+API_HASH = os.environ.get("API_HASH")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+
+app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+
+@app.on_message(filters.text & filters.private)
+async def handle_message(client, message):
+    if message.text.startswith("http"):
+        await message.reply("Downloading started...")
+
+if __name__ == "__main__":
+    keep_alive()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(app.run())
