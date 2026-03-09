@@ -1,10 +1,4 @@
 import os
-from flask import Flask
-server = Flask(__name__)
-
-@server.route("/")
-def home():
-    return "Bot is running!" os
 import requests
 from pyrogram import Client, filters
 
@@ -50,21 +44,4 @@ async def upload_file(client, message):
         await sent_msg.edit(f"দুঃখিত, কোনো সমস্যা হয়েছে: {str(e)}")
 
 print("বটটি চালু হচ্ছে...")
-import asyncio
-
-# আগের সব কোড ঠিক থাকবে...
-
-async def main():
-    async with app:
-        print("বটটি সফলভাবে চালু হয়েছে!")
-        await asyncio.Event().wait()
-
-if__name__== "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        pass
-if __name__ == "__main__":
-    # পোর্ট সেট করা যাতে Render এটাকে সচল মনে করে
-    port = int(os.environ.get("PORT", 5000))
-    server.run(host="0.0.0.0", port=port)
+app.run()
