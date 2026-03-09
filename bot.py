@@ -44,4 +44,17 @@ async def upload_file(client, message):
         await sent_msg.edit(f"দুঃখিত, কোনো সমস্যা হয়েছে: {str(e)}")
 
 print("বটটি চালু হচ্ছে...")
-app.run()
+import asyncio
+
+# আগের সব কোড ঠিক থাকবে...
+
+async def main():
+    async with app:
+        print("বটটি সফলভাবে চালু হয়েছে!")
+        await asyncio.Event().wait()
+
+if__name__== "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
