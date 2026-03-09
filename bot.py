@@ -1,4 +1,10 @@
 import os
+from flask import Flask
+server = Flask(__name__)
+
+@server.route("/")
+def home():
+    return "Bot is running!" os
 import requests
 from pyrogram import Client, filters
 
@@ -58,3 +64,7 @@ if__name__== "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+if __name__ == "__main__":
+    # পোর্ট সেট করা যাতে Render এটাকে সচল মনে করে
+    port = int(os.environ.get("PORT", 5000))
+    server.run(host="0.0.0.0", port=port)
