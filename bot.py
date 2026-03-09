@@ -1,40 +1,47 @@
 import os
-import asyncio
-import threading
-from flask import Flask
+import requests
 from pyrogram import Client, filters
 
-# ১. রেন্ডারের পোর্ট বাইন্ডিংয়ের জন্য ফ্লস্ক সার্ভার
-web_app = Flask(__name__)
-
-@web_app.route('/')
-def home():
-    return "Bot is Running!", 200
-
-def run_flask():
-    # রেন্ডার অটোমেটিক একটি PORT এনভায়রনমেন্ট ভ্যারিয়েবল দেয়
-    port = int(os.environ.get("PORT", 8080))
-    web_app.run(host='0.0.0.0', port=port)
-
-# ২. টেলিগ্রাম বট কনফিগারেশন
-API_ID = int(os.environ.get("API_ID"))
-API_HASH = os.environ.get("API_HASH")
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+# আপনার তথ্য এখানে বসান
+API_ID = 31866475  # নম্বরটি দিন, কোটেশন ছাড়া
+API_HASH = "8406c1d6680cfdb39d588b1494a6a90a"
+BOT_TOKEN = "8675890827:AAG2SV3eye90yknrF9v-kPEJaef8pS16NXY"
 
 app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 @app.on_message(filters.command("start"))
 async def start(client, message):
-    await message.reply_text("বট সচল আছে!")
+    await message.reply_text("বট সচল আছে! সরাসরি কোনো ফাইল লিংক দিন, আমি সেটি আপলোড করে দেব।")
 
-# ৩. মেইন রানার
-async def main():
-    # ফ্লস্ককে আলাদা থ্রেডে চালানো যেন রেন্ডার পোর্ট খুঁজে পায়
-    threading.Thread(target=run_flask, daemon=True).start()
+@app.on_message(filters.text & filters.private)
+async def upload_file(client, message):
+    url = message.text
+    if not url.startswith("http"):
+        return await message.reply_text("দয়া করে একটি সঠিক URL দিন।")
+
+    sent_msg = await message.reply_text("লিংকটি প্রসেস করা হচ্ছে...")
     
-    await app.start()
-    print("Bot is Live!")
-    await asyncio.Event().wait()
+    try:
+        # ফাইলের নাম বের করা
+        file_name = url.split("/")[-1] or "downloaded_file"
+        
+        # ডাউনলোড শুরু
+        await sent_msg.edit("ডাউনলোড শুরু হয়েছে...")
+        r = requests.get(url, stream=True)
+        with open(file_name, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        # আপলোড শুরু
+        await sent_msg.edit("ডাউনলোড শেষ! এখন টেলিগ্রামে আপলোড হচ্ছে...")
+        await message.reply_document(file_name)
+        
+        # ফাইলটি ডিলিট করা
+        os.remove(file_name)
+        await sent_msg.delete()
+        
+    except Exception as e:
+        await sent_msg.edit(f"দুঃখিত, কোনো সমস্যা হয়েছে: {str(e)}")
 
-if __name__ == "__main__":
-    asyncio.run(main())
+print("বটটি চালু হচ্ছে...")
+app.run()
