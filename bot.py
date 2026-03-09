@@ -1,141 +1,39 @@
 import os
-import time
 import asyncio
-import aiohttp
-import aiofiles
-from pyrogram import Client, filters
-from pyrogram.types import Message
-
-# আপনার ক্রেডেনশিয়াল এখানে দিন
-API_ID = "31866475"
-API_HASH = "8406c1d6680cfdb39d588b1494a6a90a"
-BOT_TOKEN = "8675890827:AAG2SV3eye90yknrF9v-kPEJaef8pS16NXY"
-
-app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
-
-# প্রগ্রেস বার ফাংশন
-async def progress_bar(current, total, message, start_time):
-    now = time.time()
-    diff = now - start_time
-    if round(diff % 4.00) == 0 or current == total:
-        percentage = current * 100 / total
-        speed = current / diff
-        elapsed_time = round(diff) * 1000
-        time_to_completion = round((total - current) / speed) * 1000
-        
-        progress_str = f"[{'#' * int(percentage/10)}{'.' * (10 - int(percentage/10))}]"
-        tmp = f"{progress_str} {round(percentage, 2)}%\n" \
-              f"সম্পন্ন: {current // (1024*1024)}MB / {total // (1024*1024)}MB\n" \
-              f"গতি: {speed // 1024:.2f} KB/s"
-        
-        try:
-            await message.edit(tmp)
-        except:
-            pass
-
-@app.on_message(filters.text & filters.private)
-async def upload_link(client, message: Message):
-    url = message.text
-    if not url.startswith("http"):
-        return
-
-    status = await message.reply("লিংক প্রসেস করা হচ্ছে... ⏳")
-    file_name = url.split("/")[-1] or "file.zip"
-
-    try:
-        start_time = time.time()
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                total_size = int(response.headers.get('content-length', 0))
-                
-                # ফাইল ডাউনলোড শুরু
-                await status.edit("সার্ভারে ডাউনলোড হচ্ছে... 📥")
-                async with aiofiles.open(file_name, mode='wb') as f:
-                    downloaded = 0
-                    async for chunk in response.content.iter_chunked(1024 * 1024):
-                        await f.write(chunk)
-                        downloaded += len(chunk)
-                        await progress_bar(downloaded, total_size, status, start_time)
-
-        # ফাইল আপলোড শুরু
-        await status.edit("টেলিগ্রামে আপলোড হচ্ছে... 📤")
-        up_start = time.time()
-        await message.reply_document(
-            document=file_name,
-            progress=progress_bar,
-            progress_args=(status, up_start)
-        )
-        
-        await status.delete()
-        os.remove(file_name) # স্টোরেজ খালি করতে ডিলিট
-
-    except Exception as e:
-        await status.edit(f"দুঃখিত, এরর হয়েছে: {str(e)}")
-        if os.path.exists(file_name):
-            os.remove(file_name)
-
-print("বোটটি সচল আছে...")
-app.run()
+from telethon import TelegramClient, events
 from flask import Flask
 from threading import Thread
 
-# ওয়েব সার্ভার তৈরি
-web_app = Flask('')
-
-@web_app.route('/')
-def home():
-    return "বোট সচল আছে!"
-
-def run():
-    web_app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
-
-# আপনার মূল কোডের app.run() এর ঠিক আগে keep_alive() কল করুন
-if __name__ == "__main__":
-    keep_alive()
-if __name__ == "__main__":
-    import asyncio
-    
-    # Keep alive server start
-    keep_alive()
-    
-    # নতুন পাইথন ভার্সনের জন্য লুপ হ্যান্ডলিং
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    
-    print("বোটটি সচল আছে...")
-    app.run()
-import os
-import asyncio
-import aiohttp
-import aiofiles
-from pyrogram import Client, filters
-from flask import Flask
-from threading import Thread
-
-# Flask App for Keep Alive
+# Render-এর জন্য ওয়েব সার্ভার
 web_app = Flask('')
 @web_app.route('/')
-def home(): return "Bot is Running!"
+def home(): return "Bot is Alive!"
 def run(): web_app.run(host='0.0.0.0', port=8080)
 def keep_alive(): Thread(target=run).start()
 
-# Credentials from Environment Variables
-API_ID = os.environ.get("API_ID")
+# Environment Variables থেকে ডাটা নেয়া
+API_ID = int(os.environ.get("API_ID"))
 API_HASH = os.environ.get("API_HASH")
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
-app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+client = TelegramClient('bot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
-@app.on_message(filters.text & filters.private)
-async def handle_message(client, message):
-    if message.text.startswith("http"):
-        await message.reply("Downloading started...")
+@client.on(events.NewMessage(pattern='/start'))
+async def start(event):
+    await event.respond('হাই! আমাকে ডাউনলোড লিংক দিন।')
+
+@client.on(events.NewMessage)
+async def handler(event):
+    if event.text.startswith("http"):
+        msg = await event.respond("ডাউনলোড শুরু হচ্ছে...")
+        try:
+            # সরাসরি ফাইল আপলোড (Telethon এটি খুব ভালো হ্যান্ডেল করে)
+            await client.send_file(event.chat_id, event.text, caption="আপনার ফাইল")
+            await msg.delete()
+        except Exception as e:
+            await msg.edit(f"এরর: {str(e)}")
 
 if __name__ == "__main__":
     keep_alive()
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(app.run())
+    print("বোট চালু হয়েছে...")
+    client.run_until_disconnected()
