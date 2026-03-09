@@ -1,50 +1,55 @@
 const { Telegraf } = require('telegraf');
-const express = require('express');
 const axios = require('axios');
+const express = require('express');
+const contentDisposition = require('content-disposition');
+const mime = require('mime-types');
 
 const app = express();
-app.get('/', (req, res) => res.send('Progress Bot is Online!'));
+app.get('/', (req, res) => res.send('Bot is Live!'));
 app.listen(process.env.PORT || 8080);
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
+
+bot.start((ctx) => ctx.reply('আমি প্রস্তুত! যে কোনো লিংক দিন, আমি সেটি টেলিগ্রামে আপলোড করার চেষ্টা করব। 🔥'));
 
 bot.on('text', async (ctx) => {
     const url = ctx.message.text;
     if (!url.startsWith('http')) return;
 
-    const statusMsg = await ctx.reply('ফাইল চেক করা হচ্ছে... ⏳');
+    const statusMsg = await ctx.reply('লিংক বিশ্লেষণ করা হচ্ছে... 🔍');
 
     try {
         const response = await axios({
             method: 'get',
             url: url,
             responseType: 'stream',
-            headers: { 'User-Agent': 'Mozilla/5.0' }
-        });
-
-        const totalLength = response.headers['content-length'];
-        let downloadedLength = 0;
-        let lastUpdate = 0;
-
-        response.data.on('data', (chunk) => {
-            downloadedLength += chunk.length;
-            const progress = ((downloadedLength / totalLength) * 100).toFixed(2);
-            const now = Date.now();
-
-            // প্রতি ২ সেকেন্ড অন্তর প্রোগ্রেস আপডেট করবে (টেলিগ্রাম লিমিট এড়াতে)
-            if (now - lastUpdate > 2000) {
-                const progressBar = "▓".repeat(Math.floor(progress / 10)) + "░".repeat(10 - Math.floor(progress / 10));
-                ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, null, 
-                    `ডাউনলোড হচ্ছে...\n\n[${progressBar}] ${progress}%\nভায়া: Render Server`).catch(() => {});
-                lastUpdate = now;
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36'
             }
         });
 
-        await ctx.replyWithDocument({ source: response.data, filename: 'File_' + Date.now() });
-        ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, null, '✅ আপলোড সম্পন্ন!');
+        // ফাইলের নাম বের করার চেষ্টা
+        let filename = 'file_' + Date.now();
+        const cd = response.headers['content-disposition'];
+        if (cd) {
+            const parsed = contentDisposition.parse(cd);
+            if (parsed.parameters.filename) filename = parsed.parameters.filename;
+        } else {
+            const contentType = response.headers['content-type'];
+            const extension = mime.extension(contentType);
+            if (extension) filename += `.${extension}`;
+        }
+
+        await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, null, `ফাইল পাওয়া গেছে: ${filename}\nআপলোড শুরু হচ্ছে... 📤`);
+
+        // টেলিগ্রামে আপলোড
+        await ctx.replyWithDocument({ source: response.data, filename: filename });
+        
+        ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, null, '✅ আপলোড সফল হয়েছে!');
 
     } catch (error) {
-        ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, null, '❌ এই লিংক থেকে প্রোগ্রেস বার দেখানো সম্ভব নয়।');
+        console.error(error);
+        ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, null, '❌ এই লিংকটি কাজ করছে না। সার্ভার হয়তো বোটকে ব্লক করেছে।');
     }
 });
 
